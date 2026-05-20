@@ -18,6 +18,7 @@ export function ChatView({ onOpenSettings }: Props): JSX.Element {
   const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [missingKey, setMissingKey] = useState<boolean>(false);
+  const [activeProviders, setActiveProviders] = useState<{ stt: string; tts: string } | null>(null);
   const micRef = useRef<MicSession | null>(null);
   const playerRef = useRef<PcmPlayer | null>(null);
 
@@ -26,6 +27,12 @@ export function ChatView({ onOpenSettings }: Props): JSX.Element {
       try {
         const status = await window.claudetalk.secrets.status();
         setMissingKey(!status.anthropic);
+        const list = await window.claudetalk.mcp.listProviders();
+        const stt = list.stt.find((p) => p.status.state === 'ready')?.descriptor.displayName
+          ?? list.stt[0]?.descriptor.displayName ?? '—';
+        const tts = list.tts.find((p) => p.status.state === 'ready')?.descriptor.displayName
+          ?? list.tts[0]?.descriptor.displayName ?? '—';
+        setActiveProviders({ stt, tts });
       } catch {
         setMissingKey(true);
       }
@@ -194,6 +201,21 @@ export function ChatView({ onOpenSettings }: Props): JSX.Element {
         >
           {labelFor(state)}
         </div>
+        {activeProviders !== null && (
+          <div
+            style={{
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              opacity: 0.7,
+              display: 'flex',
+              gap: 8,
+            }}
+          >
+            <span>🎙 {activeProviders.stt}</span>
+            <span>·</span>
+            <span>🔊 {activeProviders.tts}</span>
+          </div>
+        )}
       </footer>
     </div>
   );

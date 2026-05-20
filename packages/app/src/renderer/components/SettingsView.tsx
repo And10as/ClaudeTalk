@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { UiProvider } from '../data/mockProviders';
 import { adaptProvidersResult } from '../data/providerAdapter';
 import { ApiKeysSection } from './ApiKeysSection';
+import { McpHint } from './McpHint';
 import { ProviderSection } from './ProviderSection';
 
 type LoadState =
@@ -57,6 +58,7 @@ export function SettingsView(): JSX.Element {
             providers={state.tts}
             kind="tts"
           />
+          <McpHint />
         </>
       )}
     </div>
