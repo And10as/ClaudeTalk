@@ -11,14 +11,11 @@ export function TitleBar({ route, onNavigate, onResetChat }: Props): JSX.Element
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '8px 16px 8px 80px',
+        padding: '8px 12px',
         borderBottom: '1px solid var(--border)',
         background: 'var(--bg)',
-        // make the title bar draggable on macOS
-        // @ts-expect-error WebkitAppRegion is non-standard but works in Electron
-        WebkitAppRegion: 'drag',
         userSelect: 'none',
-        height: 44,
+        height: 40,
         flexShrink: 0,
       }}
     >
@@ -34,15 +31,7 @@ export function TitleBar({ route, onNavigate, onResetChat }: Props): JSX.Element
         />
         <span style={{ fontWeight: 600, fontSize: 13 }}>ClaudeTalk</span>
       </div>
-      <nav
-        style={{
-          display: 'flex',
-          gap: 4,
-          alignItems: 'center',
-          // @ts-expect-error WebkitAppRegion
-          WebkitAppRegion: 'no-drag',
-        }}
-      >
+      <nav style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
         {route === 'chat' && onResetChat !== undefined && (
           <button
             onClick={onResetChat}

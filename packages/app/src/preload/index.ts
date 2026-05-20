@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   AppPlatform,
   ClaudeTalkApi,
+  DownloadProgressEvent,
   ListProvidersResult,
   SecretKey,
 } from '../shared/ipc-types';
@@ -30,6 +31,15 @@ const api: ClaudeTalkApi = {
       const handler = (_e: Electron.IpcRendererEvent, evt: VoiceEvent): void => cb(evt);
       ipcRenderer.on('voice:event', handler);
       return () => ipcRenderer.removeListener('voice:event', handler);
+    },
+  },
+  models: {
+    download: (kind, providerId) =>
+      ipcRenderer.invoke('models:download', kind, providerId) as Promise<void>,
+    onProgress: (cb) => {
+      const handler = (_e: Electron.IpcRendererEvent, evt: DownloadProgressEvent): void => cb(evt);
+      ipcRenderer.on('models:progress', handler);
+      return () => ipcRenderer.removeListener('models:progress', handler);
     },
   },
 };

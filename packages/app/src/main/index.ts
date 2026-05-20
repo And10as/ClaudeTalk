@@ -1,9 +1,10 @@
-import { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray, nativeImage } from 'electron';
+import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, Tray, nativeImage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { VoiceMcpHost } from './mcp-host.js';
 import { getSecretStatus, loadAllToEnv, setSecret, type SecretKey } from './secrets.js';
 import { ConversationSession } from './session.js';
+import { startDownload, type DownloadKind } from './downloads.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,15 +16,26 @@ const session = new ConversationSession();
 
 const isDev = !app.isPackaged;
 
+const WIN_WIDTH = 420;
+const WIN_HEIGHT = 640;
+const WIN_TRAY_GAP = 4;
+
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
-    width: 480,
-    height: 720,
+    width: WIN_WIDTH,
+    height: WIN_HEIGHT,
     show: false,
     frame: false,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
     transparent: false,
     backgroundColor: '#FAF9F5',
-    titleBarStyle: 'hiddenInset',
+    alwaysOnTop: true,
+    hasShadow: true,
     vibrancy: 'sidebar',
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
@@ -33,13 +45,20 @@ function createWindow(): BrowserWindow {
     },
   });
 
+  win.setAlwaysOnTop(true, 'floating');
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
     void win.loadURL(process.env.ELECTRON_RENDERER_URL);
   } else {
     void win.loadFile(join(__dirname, '../renderer/index.html'));
   }
 
-  win.on('ready-to-show', () => win.show());
+  win.on('blur', () => {
+    if (win.webContents.isDevToolsOpened()) return;
+    win.hide();
+  });
+
   win.on('closed', () => {
     mainWindow = null;
   });
@@ -47,13 +66,42 @@ function createWindow(): BrowserWindow {
   return win;
 }
 
+function positionWindowUnderTray(win: BrowserWindow): void {
+  if (tray === null) return;
+  const trayBounds = tray.getBounds();
+  const display = screen.getDisplayMatching(trayBounds);
+  const winBounds = win.getBounds();
+
+  const trayCenterX = Math.round(trayBounds.x + trayBounds.width / 2);
+  let x = Math.round(trayCenterX - winBounds.width / 2);
+  let y = Math.round(trayBounds.y + trayBounds.height + WIN_TRAY_GAP);
+
+  const margin = 8;
+  if (x + winBounds.width > display.workArea.x + display.workArea.width - margin) {
+    x = display.workArea.x + display.workArea.width - winBounds.width - margin;
+  }
+  if (x < display.workArea.x + margin) x = display.workArea.x + margin;
+  if (y + winBounds.height > display.workArea.y + display.workArea.height - margin) {
+    y = display.workArea.y + display.workArea.height - winBounds.height - margin;
+  }
+
+  win.setPosition(x, y, false);
+}
+
+function showWindow(): void {
+  if (mainWindow === null) mainWindow = createWindow();
+  positionWindowUnderTray(mainWindow);
+  mainWindow.show();
+  mainWindow.focus();
+}
+
 function toggleWindow(): void {
   if (mainWindow === null) {
-    mainWindow = createWindow();
+    showWindow();
     return;
   }
   if (mainWindow.isVisible()) mainWindow.hide();
-  else mainWindow.show();
+  else showWindow();
 }
 
 function setupTray(): void {
@@ -61,14 +109,16 @@ function setupTray(): void {
   tray = new Tray(icon);
   tray.setTitle('🎙');
   tray.setToolTip('ClaudeTalk');
-  tray.setContextMenu(
-    Menu.buildFromTemplate([
-      { label: 'Open ClaudeTalk', click: toggleWindow },
-      { type: 'separator' },
-      { label: 'Quit', role: 'quit' },
-    ]),
-  );
   tray.on('click', toggleWindow);
+  tray.on('right-click', () => {
+    tray?.popUpContextMenu(
+      Menu.buildFromTemplate([
+        { label: 'Open ClaudeTalk', click: toggleWindow },
+        { type: 'separator' },
+        { label: 'Quit', role: 'quit' },
+      ]),
+    );
+  });
 }
 
 function setupIpc(): void {
@@ -97,6 +147,15 @@ function setupIpc(): void {
   ipcMain.handle('voice:stop', async () => session.stop());
   ipcMain.handle('voice:bargeIn', async () => session.bargeIn());
   ipcMain.handle('voice:reset', () => session.reset());
+
+  ipcMain.handle(
+    'models:download',
+    async (evt, kind: DownloadKind, providerId: string) => {
+      await startDownload(kind, providerId, (progress) => {
+        evt.sender.send('models:progress', { providerId, ...progress });
+      });
+    },
+  );
 }
 
 app.whenReady().then(async () => {
@@ -119,7 +178,7 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  // Keep the app alive as a menubar app — only quit via tray menu.
 });
 
 app.on('will-quit', () => {

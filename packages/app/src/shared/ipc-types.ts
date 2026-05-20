@@ -34,6 +34,14 @@ export type SecretKey = 'openai' | 'anthropic' | 'elevenlabs';
 
 import type { VoiceEvent } from './voice-events';
 
+export interface DownloadProgressEvent {
+  providerId: string;
+  state: 'started' | 'progress' | 'done' | 'error';
+  bytesReceived?: number;
+  bytesTotal?: number;
+  message?: string;
+}
+
 export interface ClaudeTalkApi {
   appVersion: () => Promise<string>;
   appPlatform: () => Promise<AppPlatform>;
@@ -52,5 +60,9 @@ export interface ClaudeTalkApi {
     bargeIn: () => Promise<void>;
     reset: () => Promise<void>;
     onEvent: (cb: (e: VoiceEvent) => void) => () => void;
+  };
+  models: {
+    download: (kind: 'stt' | 'tts', providerId: string) => Promise<void>;
+    onProgress: (cb: (e: DownloadProgressEvent) => void) => () => void;
   };
 }

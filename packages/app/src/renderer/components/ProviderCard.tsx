@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { UiProvider, UiVoice } from '../data/mockProviders';
 
 interface Props {
@@ -7,8 +7,66 @@ interface Props {
   onSelect: () => void;
 }
 
+interface DownloadState {
+  inProgress: boolean;
+  bytesReceived?: number;
+  bytesTotal?: number;
+  done: boolean;
+  error?: string;
+}
+
 export function ProviderCard({ provider, active, onSelect }: Props): JSX.Element {
   const [expanded, setExpanded] = useState(false);
+  const [download, setDownload] = useState<DownloadState>({ inProgress: false, done: false });
+
+  useEffect(() => {
+    const unsub = window.claudetalk.models.onProgress((evt) => {
+      if (evt.providerId !== provider.id) return;
+      setDownload(() => {
+        if (evt.state === 'started') {
+          return {
+            inProgress: true,
+            done: false,
+            ...(evt.bytesTotal !== undefined && { bytesTotal: evt.bytesTotal }),
+          };
+        }
+        if (evt.state === 'progress') {
+          return {
+            inProgress: true,
+            done: false,
+            ...(evt.bytesReceived !== undefined && { bytesReceived: evt.bytesReceived }),
+            ...(evt.bytesTotal !== undefined && { bytesTotal: evt.bytesTotal }),
+          };
+        }
+        if (evt.state === 'done') {
+          return { inProgress: false, done: true };
+        }
+        return {
+          inProgress: false,
+          done: false,
+          ...(evt.message !== undefined && { error: evt.message }),
+        };
+      });
+    });
+    return unsub;
+  }, [provider.id]);
+
+  const handleDownload = (): void => {
+    void (async () => {
+      try {
+        await window.claudetalk.models.download(
+          provider.id.startsWith('whisper') ? 'stt' : 'tts',
+          provider.id,
+        );
+      } catch (err) {
+        setDownload({
+          inProgress: false,
+          done: false,
+          error: (err as Error).message,
+        });
+      }
+    })();
+  };
 
   return (
     <article
@@ -37,8 +95,27 @@ export function ProviderCard({ provider, active, onSelect }: Props): JSX.Element
             </div>
           </div>
         </label>
-        <StatusBadge status={provider.status} />
+        <StatusBadge
+          status={provider.status}
+          download={download}
+          onDownload={handleDownload}
+        />
       </div>
+
+      {download.error !== undefined && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: '6px 10px',
+            background: 'var(--bg-subtle)',
+            borderRadius: 6,
+            fontSize: 12,
+            color: 'var(--danger)',
+          }}
+        >
+          {download.error}
+        </div>
+      )}
 
       {provider.voices !== undefined && provider.voices.length > 0 && (
         <>
@@ -68,13 +145,40 @@ export function ProviderCard({ provider, active, onSelect }: Props): JSX.Element
   );
 }
 
-function StatusBadge({ status }: { status: UiProvider['status'] }): JSX.Element {
+function StatusBadge({
+  status,
+  download,
+  onDownload,
+}: {
+  status: UiProvider['status'];
+  download: DownloadState;
+  onDownload: () => void;
+}): JSX.Element {
   const styles: React.CSSProperties = {
     fontSize: 11,
     padding: '3px 8px',
     borderRadius: 999,
     fontWeight: 500,
   };
+
+  if (download.inProgress) {
+    const pct =
+      download.bytesTotal !== undefined && download.bytesTotal > 0 && download.bytesReceived !== undefined
+        ? Math.round((download.bytesReceived / download.bytesTotal) * 100)
+        : null;
+    return (
+      <span style={{ ...styles, background: 'var(--bg-subtle)', color: 'var(--text-muted)' }}>
+        {pct !== null ? `${pct}%` : 'Laster ned…'}
+      </span>
+    );
+  }
+  if (download.done) {
+    return (
+      <span style={{ ...styles, background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
+        Lastet ned
+      </span>
+    );
+  }
 
   switch (status.kind) {
     case 'ready':
@@ -86,11 +190,13 @@ function StatusBadge({ status }: { status: UiProvider['status'] }): JSX.Element 
     case 'needs-download':
       return (
         <button
+          onClick={onDownload}
           style={{
             ...styles,
             background: 'var(--accent)',
             color: '#fff',
             border: 'none',
+            cursor: 'pointer',
           }}
         >
           ⬇ Last ned · {formatBytes(status.sizeBytes)}
@@ -138,7 +244,6 @@ function VoiceRow({ voice }: { voice: UiVoice }): JSX.Element {
       </div>
       <button
         onClick={() => {
-          // Preview playback wired in milestone 2; for now log only.
           // eslint-disable-next-line no-console
           console.log('preview', voice.previewUrl);
         }}
