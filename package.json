@@ -19,7 +19,8 @@
     "onlyBuiltDependencies": [
       "electron",
       "esbuild",
-      "protobufjs"
+      "protobufjs",
+      "smart-whisper"
     ]
   }
 }
