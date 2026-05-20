@@ -1,12 +1,14 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu, Tray, nativeImage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { VoiceMcpHost } from './mcp-host.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
+const mcpHost = new VoiceMcpHost();
 
 const isDev = !app.isPackaged;
 
@@ -69,12 +71,24 @@ function setupTray(): void {
 function setupIpc(): void {
   ipcMain.handle('app:version', () => app.getVersion());
   ipcMain.handle('app:platform', () => process.platform);
+
+  ipcMain.handle('mcp:listProviders', async () => mcpHost.listProviders());
+  ipcMain.handle('mcp:setProvider', async (_evt, kind: 'stt' | 'tts', id: string) =>
+    mcpHost.setProvider(kind, id),
+  );
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (process.platform === 'darwin') app.dock?.hide();
   setupTray();
   setupIpc();
+
+  try {
+    await mcpHost.connect();
+  } catch (err) {
+    process.stderr.write(`[claudetalk] MCP host failed to connect: ${(err as Error).message}\n`);
+  }
+
   mainWindow = createWindow();
 
   const ok = globalShortcut.register('CommandOrControl+Shift+Space', toggleWindow);
@@ -87,4 +101,5 @@ app.on('window-all-closed', () => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  void mcpHost.close();
 });

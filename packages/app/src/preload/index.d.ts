@@ -1,4 +1,4 @@
-import type { ClaudeTalkApi } from './index';
+import type { ClaudeTalkApi } from '../shared/ipc-types';
 
 declare global {
   interface Window {

@@ -6,10 +6,21 @@ interface Props {
   title: string;
   description: string;
   providers: UiProvider[];
+  kind: 'stt' | 'tts';
 }
 
-export function ProviderSection({ title, description, providers }: Props): JSX.Element {
+export function ProviderSection({ title, description, providers, kind }: Props): JSX.Element {
   const [activeId, setActiveId] = useState<string>(providers[0]?.id ?? '');
+
+  const handleSelect = async (id: string): Promise<void> => {
+    setActiveId(id);
+    try {
+      await window.claudetalk.mcp.setProvider(kind, id);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('setProvider failed', err);
+    }
+  };
 
   return (
     <section style={{ marginBottom: 32 }}>
@@ -23,7 +34,9 @@ export function ProviderSection({ title, description, providers }: Props): JSX.E
             key={p.id}
             provider={p}
             active={p.id === activeId}
-            onSelect={() => setActiveId(p.id)}
+            onSelect={() => {
+              void handleSelect(p.id);
+            }}
           />
         ))}
       </div>
