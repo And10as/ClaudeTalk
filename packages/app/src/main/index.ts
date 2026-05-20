@@ -1,6 +1,13 @@
 import { app, BrowserWindow, globalShortcut, ipcMain, Menu, screen, Tray, nativeImage } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+
+// Pin the user-data folder to "ClaudeTalk" so dev (productName=Electron) and
+// production both read/write the same models/secrets/logs as the standalone
+// voice-mcp-server child process. Must run before app.whenReady().
+app.setName('ClaudeTalk');
+app.setPath('userData', join(app.getPath('appData'), 'ClaudeTalk'));
+
 import { VoiceMcpHost } from './mcp-host.js';
 import { getSecretStatus, loadAllToEnv, setSecret, type SecretKey } from './secrets.js';
 import { modelsDir, startDownload, type DownloadKind } from './downloads.js';
