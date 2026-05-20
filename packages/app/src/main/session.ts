@@ -46,6 +46,13 @@ export class ConversationSession {
     this.chat.truncateLastAssistantTo(this.#spokenSoFar.length);
   }
 
+  reset(): void {
+    this.#abortAll();
+    this.chat.reset();
+    this.engine.fsm.send({ type: 'session.stop', at: Date.now() });
+    this.engine.fsm.send({ type: 'session.start', at: Date.now() });
+  }
+
   async endTurn(audio: ArrayBuffer, sampleRate: number): Promise<void> {
     this.engine.fsm.send({ type: 'vad.speech_ended', at: Date.now() });
     const pcm = new Float32Array(audio);

@@ -96,6 +96,7 @@ function setupIpc(): void {
   );
   ipcMain.handle('voice:stop', async () => session.stop());
   ipcMain.handle('voice:bargeIn', async () => session.bargeIn());
+  ipcMain.handle('voice:reset', () => session.reset());
 }
 
 app.whenReady().then(async () => {

@@ -1,9 +1,10 @@
 interface Props {
   route: 'chat' | 'settings';
   onNavigate: (route: 'chat' | 'settings') => void;
+  onResetChat?: () => void;
 }
 
-export function TitleBar({ route, onNavigate }: Props): JSX.Element {
+export function TitleBar({ route, onNavigate, onResetChat }: Props): JSX.Element {
   return (
     <header
       style={{
@@ -37,10 +38,28 @@ export function TitleBar({ route, onNavigate }: Props): JSX.Element {
         style={{
           display: 'flex',
           gap: 4,
+          alignItems: 'center',
           // @ts-expect-error WebkitAppRegion
           WebkitAppRegion: 'no-drag',
         }}
       >
+        {route === 'chat' && onResetChat !== undefined && (
+          <button
+            onClick={onResetChat}
+            title="Start ny samtale"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              fontSize: 12,
+              padding: '4px 8px',
+              borderRadius: 6,
+              marginRight: 4,
+            }}
+          >
+            Ny samtale
+          </button>
+        )}
         <TabButton active={route === 'chat'} onClick={() => onNavigate('chat')}>
           Chat
         </TabButton>

@@ -9,12 +9,28 @@ interface TranscriptItem {
   text: string;
 }
 
-export function ChatView(): JSX.Element {
+interface Props {
+  onOpenSettings: () => void;
+}
+
+export function ChatView({ onOpenSettings }: Props): JSX.Element {
   const [state, setState] = useState<ConversationState>('idle');
   const [transcript, setTranscript] = useState<TranscriptItem[]>([]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [missingKey, setMissingKey] = useState<boolean>(false);
   const micRef = useRef<MicSession | null>(null);
   const playerRef = useRef<PcmPlayer | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const status = await window.claudetalk.secrets.status();
+        setMissingKey(!status.anthropic);
+      } catch {
+        setMissingKey(true);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     const unsub = window.claudetalk.voice.onEvent((evt) => handleEvent(evt));
@@ -29,7 +45,14 @@ export function ChatView(): JSX.Element {
     switch (evt.type) {
       case 'state':
         setState(evt.state);
-        if (evt.state === 'speaking' || evt.state === 'thinking') setErrorMsg(null);
+        if (evt.state === 'speaking') {
+          micRef.current?.notifyTtsStarted();
+          setErrorMsg(null);
+        } else if (evt.state === 'listening' || evt.state === 'idle') {
+          micRef.current?.notifyTtsStopped();
+        } else if (evt.state === 'thinking') {
+          setErrorMsg(null);
+        }
         break;
       case 'finalTranscript':
         setTranscript((t) => [...t, { role: 'user', text: evt.text }]);
@@ -71,13 +94,14 @@ export function ChatView(): JSX.Element {
         await window.claudetalk.voice.start();
         micRef.current = await startMic({
           onSpeechStart: () => {
-            // Main FSM is the source of truth; the local handler just
-            // optimistically cuts the audio for snappier perceived latency.
-            void window.claudetalk.voice.bargeIn();
-            playerRef.current?.stop();
+            // Main FSM owns truth; renderer just stops audio for snappy UX.
           },
           onSpeechEnd: (audio, sr) => {
             void window.claudetalk.voice.endTurn(audioToArrayBuffer(audio), sr);
+          },
+          onBargeIn: () => {
+            void window.claudetalk.voice.bargeIn();
+            playerRef.current?.stop();
           },
           onError: (err) => setErrorMsg(`Mikrofon: ${err.message}`),
         });
@@ -108,7 +132,27 @@ export function ChatView(): JSX.Element {
           gap: 12,
         }}
       >
-        {transcript.length === 0 && state === 'idle' && <EmptyHero />}
+        {missingKey && (
+          <button
+            onClick={onOpenSettings}
+            style={{
+              padding: 14,
+              background: 'var(--accent-subtle)',
+              border: '1px solid var(--accent)',
+              borderRadius: 12,
+              color: 'var(--accent)',
+              fontSize: 13,
+              textAlign: 'left',
+              cursor: 'pointer',
+            }}
+          >
+            <strong style={{ display: 'block', marginBottom: 4 }}>
+              Mangler Anthropic API-nøkkel
+            </strong>
+            Trykk her for å legge inn nøkkelen i innstillinger.
+          </button>
+        )}
+        {transcript.length === 0 && state === 'idle' && !missingKey && <EmptyHero />}
         {transcript.map((item, i) => (
           <TranscriptBubble key={i} item={item} />
         ))}

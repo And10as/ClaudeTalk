@@ -50,6 +50,7 @@ export interface ClaudeTalkApi {
     endTurn: (audio: ArrayBuffer, sampleRate: number) => Promise<void>;
     stop: () => Promise<void>;
     bargeIn: () => Promise<void>;
+    reset: () => Promise<void>;
     onEvent: (cb: (e: VoiceEvent) => void) => () => void;
   };
 }

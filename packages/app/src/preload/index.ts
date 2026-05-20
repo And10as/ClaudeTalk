@@ -25,6 +25,7 @@ const api: ClaudeTalkApi = {
       ipcRenderer.invoke('voice:endTurn', audio, sampleRate) as Promise<void>,
     stop: () => ipcRenderer.invoke('voice:stop') as Promise<void>,
     bargeIn: () => ipcRenderer.invoke('voice:bargeIn') as Promise<void>,
+    reset: () => ipcRenderer.invoke('voice:reset') as Promise<void>,
     onEvent: (cb) => {
       const handler = (_e: Electron.IpcRendererEvent, evt: VoiceEvent): void => cb(evt);
       ipcRenderer.on('voice:event', handler);
