@@ -15,7 +15,8 @@ export function SettingsView(): JSX.Element {
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+
+    const refresh = async (): Promise<void> => {
       try {
         const result = await window.claudetalk.mcp.listProviders();
         if (cancelled) return;
@@ -25,9 +26,17 @@ export function SettingsView(): JSX.Element {
         if (cancelled) return;
         setState({ kind: 'error', message: (err as Error).message });
       }
-    })();
+    };
+
+    void refresh();
+
+    const unsub = window.claudetalk.models.onProgress((evt) => {
+      if (evt.state === 'done') void refresh();
+    });
+
     return () => {
       cancelled = true;
+      unsub();
     };
   }, []);
 

@@ -3,6 +3,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { app } from 'electron';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { isDownloaded } from './downloads.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -65,7 +66,11 @@ export class VoiceMcpHost {
     const client = this.#require();
     const result = await client.callTool({ name: 'list_providers', arguments: {} });
     const text = extractText(result);
-    return JSON.parse(text) as ListProvidersResult;
+    const raw = JSON.parse(text) as ListProvidersResult;
+    return {
+      stt: await Promise.all(raw.stt.map(reconcileWithDisk)),
+      tts: await Promise.all(raw.tts.map(reconcileWithDisk)),
+    };
   }
 
   async setProvider(kind: 'stt' | 'tts', providerId: string): Promise<string> {
@@ -99,6 +104,15 @@ function resolveServerEntry(): string {
     return join(process.resourcesPath, 'voice-mcp-server', 'dist', 'index.js');
   }
   return resolve(__dirname, '../../../voice-mcp-server/dist/index.js');
+}
+
+async function reconcileWithDisk(entry: ProviderEntry): Promise<ProviderEntry> {
+  if (!entry.descriptor.local) return entry;
+  if (entry.status.state === 'ready' || entry.status.state === 'downloading') return entry;
+  if (await isDownloaded(entry.descriptor.id)) {
+    return { ...entry, status: { state: 'ready' } };
+  }
+  return entry;
 }
 
 function extractText(result: unknown): string {

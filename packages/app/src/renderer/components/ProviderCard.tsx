@@ -172,7 +172,7 @@ function StatusBadge({
       </span>
     );
   }
-  if (download.done) {
+  if (download.done && status.kind !== 'ready') {
     return (
       <span style={{ ...styles, background: 'var(--accent-subtle)', color: 'var(--accent)' }}>
         Lastet ned
