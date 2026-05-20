@@ -3,7 +3,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { app } from 'electron';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { isDownloaded } from './downloads.js';
+import { isDownloaded, modelsDir } from './downloads.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -50,6 +50,7 @@ export class VoiceMcpHost {
       env: {
         ...(process.env as Record<string, string>),
         ELECTRON_RUN_AS_NODE: '1',
+        CLAUDETALK_MODELS_DIR: modelsDir(),
       },
     });
 

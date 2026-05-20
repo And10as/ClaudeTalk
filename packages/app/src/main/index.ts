@@ -3,9 +3,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { VoiceMcpHost } from './mcp-host.js';
 import { getSecretStatus, loadAllToEnv, setSecret, type SecretKey } from './secrets.js';
-import { ConversationSession } from './session.js';
-import { startDownload, type DownloadKind } from './downloads.js';
+import { modelsDir, startDownload, type DownloadKind } from './downloads.js';
 import { loadSettings, saveSettings } from './settings.js';
+import { ConversationSession } from './session.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

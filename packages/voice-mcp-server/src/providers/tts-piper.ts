@@ -38,7 +38,10 @@ export class PiperTts implements TtsProvider {
   }
 
   async status(): Promise<ProviderStatus> {
-    return { state: 'needs-download', sizeBytes: 64 * 1024 * 1024 };
+    return {
+      state: 'unavailable',
+      reason: 'Inference kommer — bruk OpenAI TTS eller macOS say inntil videre',
+    };
   }
 
   // eslint-disable-next-line require-yield

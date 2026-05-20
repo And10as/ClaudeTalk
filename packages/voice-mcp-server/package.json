@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
+    "smart-whisper": "^0.8.1",
     "ws": "^8.18.0",
     "zod": "^3.23.8"
   },

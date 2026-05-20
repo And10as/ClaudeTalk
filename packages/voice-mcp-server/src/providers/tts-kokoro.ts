@@ -37,7 +37,10 @@ export class KokoroTts implements TtsProvider {
   }
 
   async status(): Promise<ProviderStatus> {
-    return { state: 'needs-download', sizeBytes: MODEL_SIZE_BYTES };
+    return {
+      state: 'unavailable',
+      reason: 'Inference kommer — bruk OpenAI TTS eller macOS say inntil videre',
+    };
   }
 
   // eslint-disable-next-line require-yield
