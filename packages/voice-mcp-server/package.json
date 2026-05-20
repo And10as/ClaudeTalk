@@ -3,7 +3,18 @@
   "version": "0.0.1",
   "description": "MCP server exposing voice tools (listen, speak, stop_speaking, cancel_listening) with swappable local/cloud STT+TTS providers.",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/lib.js",
+  "types": "dist/lib.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib.d.ts",
+      "import": "./dist/lib.js"
+    },
+    "./server": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "bin": {
     "claudetalk-voice-mcp": "dist/index.js"
   },

@@ -30,11 +30,26 @@ export interface ListProvidersResult {
 
 export type AppPlatform = 'aix' | 'android' | 'darwin' | 'freebsd' | 'haiku' | 'linux' | 'openbsd' | 'sunos' | 'win32' | 'cygwin' | 'netbsd';
 
+export type SecretKey = 'openai' | 'anthropic' | 'elevenlabs';
+
+import type { VoiceEvent } from './voice-events';
+
 export interface ClaudeTalkApi {
   appVersion: () => Promise<string>;
   appPlatform: () => Promise<AppPlatform>;
   mcp: {
     listProviders: () => Promise<ListProvidersResult>;
     setProvider: (kind: 'stt' | 'tts', providerId: string) => Promise<string>;
+  };
+  secrets: {
+    status: () => Promise<Record<SecretKey, boolean>>;
+    set: (key: SecretKey, value: string) => Promise<void>;
+  };
+  voice: {
+    start: () => Promise<void>;
+    endTurn: (audio: ArrayBuffer, sampleRate: number) => Promise<void>;
+    stop: () => Promise<void>;
+    bargeIn: () => Promise<void>;
+    onEvent: (cb: (e: VoiceEvent) => void) => () => void;
   };
 }

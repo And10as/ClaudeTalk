@@ -17,7 +17,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "@modelcontextprotocol/sdk": "^1.0.4",
-    "@claudetalk/voice-mcp-server": "workspace:*"
+    "@claudetalk/voice-mcp-server": "workspace:*",
+    "@ricky0123/vad-web": "^0.0.24",
+    "onnxruntime-web": "^1.20.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

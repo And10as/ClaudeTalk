@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { UiProvider } from '../data/mockProviders';
 import { adaptProvidersResult } from '../data/providerAdapter';
+import { ApiKeysSection } from './ApiKeysSection';
 import { ProviderSection } from './ProviderSection';
 
 type LoadState =
@@ -43,6 +44,7 @@ export function SettingsView(): JSX.Element {
       {state.kind === 'error' && <ErrorHint message={state.message} />}
       {state.kind === 'ready' && (
         <>
+          <ApiKeysSection />
           <ProviderSection
             title="Speech-to-text"
             description="Hvordan ClaudeTalk forstår det du sier."

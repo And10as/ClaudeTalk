@@ -83,6 +83,11 @@ export class VoiceMcpHost {
     this.#client = null;
   }
 
+  async restart(): Promise<void> {
+    await this.close();
+    await this.connect();
+  }
+
   #require(): Client {
     if (this.#client === null) throw new Error('VoiceMcpHost not connected');
     return this.#client;
