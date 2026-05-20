@@ -8,6 +8,7 @@ import {
 import { z } from 'zod';
 import { playPcm, type PlaybackHandle } from './audio/play-audio.js';
 import { recordWithSox } from './audio/sox-record.js';
+import { logEvent } from './event-log.js';
 import { TtsEchoFilter, filterHallucinations } from './filters.js';
 import { ConversationFsm } from './fsm.js';
 import { registry } from './providers/registry.js';
@@ -131,28 +132,52 @@ export function createVoiceMcpServer(opts: VoiceServerOptions): Server {
         fsm.send({ type: 'session.start', at: Date.now() });
         fsm.send({ type: 'vad.speech_started', at: Date.now() });
 
+        const sttId = registry.activeStt().descriptor.id;
+        await logEvent('listen.start', { provider: sttId, ...args });
+
+        const t0 = Date.now();
         try {
           const recOpts: Parameters<typeof recordWithSox>[0] = { signal: abort.signal };
           if (args.maxDurationSec !== undefined) recOpts.maxDurationSec = args.maxDurationSec;
           if (args.silenceDurationSec !== undefined) recOpts.silenceDurationSec = args.silenceDurationSec;
           const { pcm, sampleRate } = await recordWithSox(recOpts);
           fsm.send({ type: 'vad.speech_ended', at: Date.now() });
+          await logEvent('listen.recorded', {
+            samples: pcm.length,
+            seconds: +(pcm.length / sampleRate).toFixed(2),
+            ms: Date.now() - t0,
+          });
 
           if (pcm.length === 0) {
+            await logEvent('listen.empty');
             return { content: [{ type: 'text', text: '' }] };
           }
 
           const stt = registry.activeStt();
           const sttOpts: { sampleRate: number; language?: string } = { sampleRate };
           if (args.language !== undefined) sttOpts.language = args.language;
+          const sttStart = Date.now();
           const result = await stt.transcribe(pcm, sttOpts);
+          await logEvent('listen.transcribed', {
+            ms: Date.now() - sttStart,
+            chars: result.text.length,
+            text: result.text.slice(0, 200),
+          });
           const cleaned = filterHallucinations(result.text);
-          if (cleaned === null) return { content: [{ type: 'text', text: '' }] };
-          if (echo.isLikelyEcho(cleaned)) return { content: [{ type: 'text', text: '' }] };
+          if (cleaned === null) {
+            await logEvent('listen.rejected', { reason: 'hallucination', raw: result.text }, 'warn');
+            return { content: [{ type: 'text', text: '' }] };
+          }
+          if (echo.isLikelyEcho(cleaned)) {
+            await logEvent('listen.rejected', { reason: 'echo', text: cleaned }, 'warn');
+            return { content: [{ type: 'text', text: '' }] };
+          }
 
           fsm.send({ type: 'turn.complete', at: Date.now() });
+          await logEvent('listen.done', { text: cleaned });
           return { content: [{ type: 'text', text: cleaned }] };
         } catch (err) {
+          await logEvent('listen.error', { message: (err as Error).message }, 'error');
           return {
             content: [{ type: 'text', text: `listen failed: ${(err as Error).message}` }],
             isError: true,
@@ -175,11 +200,20 @@ export function createVoiceMcpServer(opts: VoiceServerOptions): Server {
         fsm.send({ type: 'response.first_token', at: Date.now() });
         echo.recordSpoken(args.text);
 
+        const voiceId = args.voiceId ?? defaultVoiceFor(tts.descriptor.id);
+        await logEvent('speak.start', {
+          provider: tts.descriptor.id,
+          voice: voiceId,
+          chars: args.text.length,
+          preview: args.text.slice(0, 120),
+        });
+
+        const t0 = Date.now();
         try {
           const chunks: Float32Array[] = [];
           let sampleRate = 24_000;
           const synthOpts: Parameters<typeof tts.synthesize>[1] = {
-            voiceId: args.voiceId ?? defaultVoiceFor(tts.descriptor.id),
+            voiceId,
             signal: abort.signal,
           };
           if (args.speed !== undefined) synthOpts.speed = args.speed;
@@ -190,12 +224,28 @@ export function createVoiceMcpServer(opts: VoiceServerOptions): Server {
           }
           const merged = concatFloat32(chunks);
 
+          await logEvent('speak.synthesized', {
+            samples: merged.length,
+            seconds: +(merged.length / sampleRate).toFixed(2),
+            ms: Date.now() - t0,
+          });
+
+          if (merged.length === 0) {
+            // Provider handled playback itself (e.g. macOS say in direct mode).
+            await logEvent('speak.done', { mode: 'direct', ms: Date.now() - t0 });
+            return { content: [{ type: 'text', text: 'played' }] };
+          }
+
           const playback = playPcm(merged, sampleRate);
           activePlayback = playback;
           await playback.finished;
           fsm.send({ type: 'tts.finished', at: Date.now() });
-          return { content: [{ type: 'text', text: `Played ${merged.length / sampleRate}s of audio.` }] };
+          await logEvent('speak.done', { ms: Date.now() - t0 });
+          return {
+            content: [{ type: 'text', text: `Played ${merged.length / sampleRate}s of audio.` }],
+          };
         } catch (err) {
+          await logEvent('speak.error', { message: (err as Error).message }, 'error');
           return {
             content: [{ type: 'text', text: `speak failed: ${(err as Error).message}` }],
             isError: true,
@@ -211,12 +261,14 @@ export function createVoiceMcpServer(opts: VoiceServerOptions): Server {
         activePlayback?.stop();
         activePlayback = null;
         fsm.send({ type: 'barge_in', at: Date.now() });
+        await logEvent('stop_speaking');
         return { content: [{ type: 'text', text: 'stopped' }] };
       }
 
       case 'cancel_listening': {
         activeListen?.abort.abort();
         activeListen = null;
+        await logEvent('cancel_listening');
         return { content: [{ type: 'text', text: 'cancelled' }] };
       }
 
@@ -224,6 +276,7 @@ export function createVoiceMcpServer(opts: VoiceServerOptions): Server {
         const { kind, providerId } = SetProviderInput.parse(req.params.arguments ?? {});
         if (kind === 'stt') registry.setActiveStt(providerId);
         else registry.setActiveTts(providerId);
+        await logEvent('set_provider', { kind, providerId });
         return { content: [{ type: 'text', text: `Active ${kind} → ${providerId}` }] };
       }
 

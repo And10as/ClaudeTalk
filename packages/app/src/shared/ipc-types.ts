@@ -72,4 +72,15 @@ export interface ClaudeTalkApi {
       ttsVoiceId?: string;
     }>;
   };
+  log: {
+    start: () => Promise<void>;
+    onEvent: (cb: (e: LogEntry) => void) => () => void;
+  };
+}
+
+export interface LogEntry {
+  ts: string;
+  level: 'info' | 'warn' | 'error';
+  event: string;
+  details?: Record<string, unknown>;
 }

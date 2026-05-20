@@ -6,6 +6,7 @@ import { getSecretStatus, loadAllToEnv, setSecret, type SecretKey } from './secr
 import { modelsDir, startDownload, type DownloadKind } from './downloads.js';
 import { loadSettings, saveSettings } from './settings.js';
 import { ConversationSession } from './session.js';
+import { EventLogTail } from './log-tail.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -14,6 +15,7 @@ let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 const mcpHost = new VoiceMcpHost();
 const session = new ConversationSession();
+const logTail = new EventLogTail();
 
 const isDev = !app.isPackaged;
 
@@ -161,6 +163,10 @@ function setupIpc(): void {
       });
     },
   );
+
+  ipcMain.handle('log:start', async (evt) => {
+    await logTail.start(evt.sender);
+  });
 }
 
 app.whenReady().then(async () => {

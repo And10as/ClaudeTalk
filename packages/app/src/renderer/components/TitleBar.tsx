@@ -1,6 +1,8 @@
+export type Route = 'live' | 'chat' | 'settings';
+
 interface Props {
-  route: 'chat' | 'settings';
-  onNavigate: (route: 'chat' | 'settings') => void;
+  route: Route;
+  onNavigate: (route: Route) => void;
   onResetChat?: () => void;
 }
 
@@ -49,6 +51,9 @@ export function TitleBar({ route, onNavigate, onResetChat }: Props): JSX.Element
             Ny samtale
           </button>
         )}
+        <TabButton active={route === 'live'} onClick={() => onNavigate('live')}>
+          Live
+        </TabButton>
         <TabButton active={route === 'chat'} onClick={() => onNavigate('chat')}>
           Chat
         </TabButton>

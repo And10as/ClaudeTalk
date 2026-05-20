@@ -4,6 +4,7 @@ import type {
   ClaudeTalkApi,
   DownloadProgressEvent,
   ListProvidersResult,
+  LogEntry,
   SecretKey,
 } from '../shared/ipc-types';
 import type { VoiceEvent } from '../shared/voice-events';
@@ -49,6 +50,14 @@ const api: ClaudeTalkApi = {
         ttsProviderId?: string;
         ttsVoiceId?: string;
       }>,
+  },
+  log: {
+    start: () => ipcRenderer.invoke('log:start') as Promise<void>,
+    onEvent: (cb) => {
+      const handler = (_e: Electron.IpcRendererEvent, evt: LogEntry): void => cb(evt);
+      ipcRenderer.on('voice:logEvent', handler);
+      return () => ipcRenderer.removeListener('voice:logEvent', handler);
+    },
   },
 };
 

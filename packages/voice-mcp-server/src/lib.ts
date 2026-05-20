@@ -1,5 +1,7 @@
 export { ConversationFsm } from './fsm.js';
 export type { ConversationState, FsmEvent } from './fsm.js';
+export { logEvent, eventsLogPath } from './event-log.js';
+export type { VoiceEventLogEntry, EventLevel } from './event-log.js';
 export { filterHallucinations, TtsEchoFilter } from './filters.js';
 export { registry } from './providers/registry.js';
 export type {

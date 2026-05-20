@@ -1,15 +1,12 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ChatView } from './components/ChatView';
+import { LiveView } from './components/LiveView';
 import { SettingsView } from './components/SettingsView';
-import { TitleBar } from './components/TitleBar';
-
-type Route = 'chat' | 'settings';
+import { TitleBar, type Route } from './components/TitleBar';
 
 export function App(): JSX.Element {
-  const [route, setRoute] = useState<Route>('chat');
+  const [route, setRoute] = useState<Route>('live');
   const [resetTick, setResetTick] = useState(0);
-  const navRef = useRef<(route: Route) => void>(setRoute);
-  navRef.current = setRoute;
 
   const handleReset = useCallback(() => {
     void window.claudetalk.voice.reset();
@@ -26,12 +23,12 @@ export function App(): JSX.Element {
       }}
     >
       <TitleBar route={route} onNavigate={setRoute} onResetChat={handleReset} />
-      <main style={{ flex: 1, overflow: 'auto' }}>
-        {route === 'chat' ? (
+      <main style={{ flex: 1, overflow: 'hidden' }}>
+        {route === 'live' && <LiveView />}
+        {route === 'chat' && (
           <ChatView key={resetTick} onOpenSettings={() => setRoute('settings')} />
-        ) : (
-          <SettingsView />
         )}
+        {route === 'settings' && <SettingsView />}
       </main>
     </div>
   );
