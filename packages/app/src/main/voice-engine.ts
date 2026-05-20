@@ -41,6 +41,11 @@ export class VoiceEngine {
     }
   }
 
+  selectProvider(kind: 'stt' | 'tts', providerId: string): void {
+    if (kind === 'stt') registry.setActiveStt(providerId);
+    else registry.setActiveTts(providerId);
+  }
+
   stt(): SttProvider {
     return registry.activeStt();
   }

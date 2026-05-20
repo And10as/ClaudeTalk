@@ -65,4 +65,11 @@ export interface ClaudeTalkApi {
     download: (kind: 'stt' | 'tts', providerId: string) => Promise<void>;
     onProgress: (cb: (e: DownloadProgressEvent) => void) => () => void;
   };
+  settings: {
+    get: () => Promise<{
+      sttProviderId?: string;
+      ttsProviderId?: string;
+      ttsVoiceId?: string;
+    }>;
+  };
 }

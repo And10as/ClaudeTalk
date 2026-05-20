@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { UiProvider } from '../data/mockProviders';
 import { ProviderCard } from './ProviderCard';
 
@@ -11,6 +11,21 @@ interface Props {
 
 export function ProviderSection({ title, description, providers, kind }: Props): JSX.Element {
   const [activeId, setActiveId] = useState<string>(providers[0]?.id ?? '');
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const persisted = await window.claudetalk.settings.get();
+      if (cancelled) return;
+      const saved = kind === 'stt' ? persisted.sttProviderId : persisted.ttsProviderId;
+      if (saved !== undefined && providers.some((p) => p.id === saved)) {
+        setActiveId(saved);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [kind, providers]);
 
   const handleSelect = async (id: string): Promise<void> => {
     setActiveId(id);

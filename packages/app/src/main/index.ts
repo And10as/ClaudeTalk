@@ -5,6 +5,7 @@ import { VoiceMcpHost } from './mcp-host.js';
 import { getSecretStatus, loadAllToEnv, setSecret, type SecretKey } from './secrets.js';
 import { ConversationSession } from './session.js';
 import { startDownload, type DownloadKind } from './downloads.js';
+import { loadSettings, saveSettings } from './settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,9 +127,13 @@ function setupIpc(): void {
   ipcMain.handle('app:platform', () => process.platform);
 
   ipcMain.handle('mcp:listProviders', async () => mcpHost.listProviders());
-  ipcMain.handle('mcp:setProvider', async (_evt, kind: 'stt' | 'tts', id: string) =>
-    mcpHost.setProvider(kind, id),
-  );
+  ipcMain.handle('mcp:setProvider', async (_evt, kind: 'stt' | 'tts', id: string) => {
+    const result = await mcpHost.setProvider(kind, id);
+    await saveSettings(kind === 'stt' ? { sttProviderId: id } : { ttsProviderId: id });
+    session.applyProviderSelection(kind, id);
+    return result;
+  });
+  ipcMain.handle('settings:get', async () => loadSettings());
 
   ipcMain.handle('secrets:status', async () => getSecretStatus());
   ipcMain.handle('secrets:set', async (_evt, key: SecretKey, value: string) => {
@@ -164,9 +169,22 @@ app.whenReady().then(async () => {
   setupIpc();
 
   await loadAllToEnv();
+  const persisted = await loadSettings();
+  if (persisted.sttProviderId !== undefined) {
+    session.applyProviderSelection('stt', persisted.sttProviderId);
+  }
+  if (persisted.ttsProviderId !== undefined) {
+    session.applyProviderSelection('tts', persisted.ttsProviderId);
+  }
 
   try {
     await mcpHost.connect();
+    if (persisted.sttProviderId !== undefined) {
+      try { await mcpHost.setProvider('stt', persisted.sttProviderId); } catch { /* ignore */ }
+    }
+    if (persisted.ttsProviderId !== undefined) {
+      try { await mcpHost.setProvider('tts', persisted.ttsProviderId); } catch { /* ignore */ }
+    }
   } catch (err) {
     process.stderr.write(`[claudetalk] MCP host failed to connect: ${(err as Error).message}\n`);
   }

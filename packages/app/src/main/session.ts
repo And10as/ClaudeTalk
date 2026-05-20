@@ -53,6 +53,14 @@ export class ConversationSession {
     this.engine.fsm.send({ type: 'session.start', at: Date.now() });
   }
 
+  applyProviderSelection(kind: 'stt' | 'tts', providerId: string): void {
+    try {
+      this.engine.selectProvider(kind, providerId);
+    } catch (err) {
+      this.#emit({ type: 'error', message: `Provider: ${(err as Error).message}` });
+    }
+  }
+
   async endTurn(audio: ArrayBuffer, sampleRate: number): Promise<void> {
     this.engine.fsm.send({ type: 'vad.speech_ended', at: Date.now() });
     const pcm = new Float32Array(audio);

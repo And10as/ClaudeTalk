@@ -42,6 +42,14 @@ const api: ClaudeTalkApi = {
       return () => ipcRenderer.removeListener('models:progress', handler);
     },
   },
+  settings: {
+    get: () =>
+      ipcRenderer.invoke('settings:get') as Promise<{
+        sttProviderId?: string;
+        ttsProviderId?: string;
+        ttsVoiceId?: string;
+      }>,
+  },
 };
 
 contextBridge.exposeInMainWorld('claudetalk', api);
