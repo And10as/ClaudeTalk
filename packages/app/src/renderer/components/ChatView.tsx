@@ -144,19 +144,22 @@ export function ChatView({ onOpenSettings }: Props): JSX.Element {
             onClick={onOpenSettings}
             style={{
               padding: 14,
-              background: 'var(--accent-subtle)',
-              border: '1px solid var(--accent)',
+              background: 'var(--bg-subtle)',
+              border: '1px solid var(--border)',
               borderRadius: 12,
-              color: 'var(--accent)',
+              color: 'var(--text)',
               fontSize: 13,
               textAlign: 'left',
               cursor: 'pointer',
             }}
           >
             <strong style={{ display: 'block', marginBottom: 4 }}>
-              Mangler Anthropic API-nøkkel
+              Innebygd chat krever Anthropic API-nøkkel
             </strong>
-            Trykk her for å legge inn nøkkelen i innstillinger.
+            <span style={{ color: 'var(--text-muted)' }}>
+              Vil du heller snakke til Claude i Claude Desktop? Da slipper du nøkkelen — sett opp
+              MCP-serveren i Settings ↘ Bruk i Claude Desktop / Code.
+            </span>
           </button>
         )}
         {transcript.length === 0 && state === 'idle' && !missingKey && <EmptyHero />}

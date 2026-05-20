@@ -29,7 +29,9 @@ export function McpHint(): JSX.Element {
           Bruk i Claude Desktop / Code
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '2px 0 0' }}>
-          Voice-pipelinen eksponerer en MCP-server du kan koble til andre Claude-klienter.
+          Lim inn i <code>claude_desktop_config.json</code> så Claude kan kalle{' '}
+          <code>listen</code> og <code>speak</code> direkte i chat-en din. Krever{' '}
+          <code>sox</code> for mikrofon-opptak (<code>brew install sox</code>).
         </p>
       </div>
       <article

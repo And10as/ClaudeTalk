@@ -12,6 +12,8 @@ import { createVoiceMcpServer } from './server.js';
 
 function registerDefaults(): void {
   registry.registerStt(new OpenAiWhisperApiStt());
+  registry.registerStt(new LocalWhisperStt('tiny'));
+  registry.registerStt(new LocalWhisperStt('base'));
   registry.registerStt(new LocalWhisperStt('small'));
   registry.registerStt(new LocalWhisperStt('medium'));
 
@@ -19,6 +21,13 @@ function registerDefaults(): void {
   registry.registerTts(new KokoroTts());
   registry.registerTts(new PiperTts());
   registry.registerTts(new MacSayTts());
+
+  // Sensible defaults so listen/speak work out of the box.
+  const preferredStt = process.env.OPENAI_API_KEY ? 'openai-whisper-api' : 'whisper-local-small';
+  const preferredTts =
+    process.env.OPENAI_API_KEY ? 'openai-tts' : process.platform === 'darwin' ? 'mac-say' : 'openai-tts';
+  try { registry.setActiveStt(preferredStt); } catch { /* fall back below */ }
+  try { registry.setActiveTts(preferredTts); } catch { /* fall back below */ }
 }
 
 async function main(): Promise<void> {

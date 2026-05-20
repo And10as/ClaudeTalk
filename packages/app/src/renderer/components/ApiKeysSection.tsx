@@ -5,17 +5,18 @@ const KEY_LABELS: Record<SecretKey, { label: string; placeholder: string; helper
   openai: {
     label: 'OpenAI',
     placeholder: 'sk-...',
-    helper: 'For OpenAI Whisper API (STT) og tts-1 (TTS).',
+    helper: 'For OpenAI Whisper API (STT) og tts-1 (TTS). Valgfri hvis du bruker lokal Whisper + macOS say.',
   },
   anthropic: {
-    label: 'Anthropic',
+    label: 'Anthropic (valgfri)',
     placeholder: 'sk-ant-...',
-    helper: 'For å snakke med Claude.',
+    helper:
+      'Bare nødvendig hvis du bruker ClaudeTalks innebygde chat. Snakker du i Claude Desktop via MCP, trenger du ikke denne.',
   },
   elevenlabs: {
-    label: 'ElevenLabs',
+    label: 'ElevenLabs (valgfri)',
     placeholder: 'sk_...',
-    helper: 'Valgfri. For ElevenLabs TTS.',
+    helper: 'For ElevenLabs TTS.',
   },
 };
 
@@ -35,6 +36,7 @@ export function ApiKeysSection(): JSX.Element {
         <h2 style={{ fontSize: 16, fontFamily: 'inherit', fontWeight: 600 }}>API-nøkler</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '2px 0 0' }}>
           Lagret kryptert i macOS Keychain via Electron safeStorage. Forlater aldri din maskin.
+          Hovedbruken er Claude Desktop via MCP — da trenger du ikke Anthropic-nøkkel.
         </p>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
